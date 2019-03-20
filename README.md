@@ -38,6 +38,9 @@ BioPerl
 
 Tested on output from nhmmer v.3.1b2.
 
+**Wed 20 Mar 2019 09:45:00 AM CET:** Latest HMMer version is 3.2.1 (June 2018).
+Need to review the script to accomodate changes in output format!
+
 ## AUTHOR:
 
 Johan Nylander (JN), Johan.Nylander@nbis.se
