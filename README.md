@@ -2,11 +2,16 @@
 
 ## USAGE
 
-    ./hmmer-parser.pl [-v] [-s=<E-value|Score|Identity>] [-n <max>] -i hmmer-output-file-from-hmmsearch -o oufile.fasta
+    ./hmmer-parser.pl [options] -i output-file-from-hmmsearch-or-nhmmer
 
 ## DESCRIPTION
 
-Parses output from [hmmer](http://hmmer.org/) searches.
+Parses output from [hmmer](http://hmmer.org/) searches (hmmsearch or nhmmer).
+
+Prints hits in fasta format with descriptions added to the fasta header (tab separated).
+
+Will print to stdout or to file.
+
 Prints hits in fasta format with descriptions added to the fasta header (tab separated).
 
 Example output fasta header:
@@ -15,21 +20,33 @@ Example output fasta header:
 
 A label "PRESENT" will be there if identity requirements are fulfilled:
 
-    if ( ($percent_id >= 80) and ($percent_query_coverage >= 80) )
+    if ( (percent identity in HSP >= PERCENTAGE) and (percent coverage of HSP to query >= COVERAGE) )
+
+If not "PRESENT", then the tag can be labeled as "ABSENT" or "TRUNCATED" depending on the
+values of percent identity in HSP and the percent coverage of HSP to query.
+
+The values of PERCENTAGE and COVERAGE can be set by options -p and -c and will only affect
+the tag "Result" in the output fasta headers.
 
 ## OPTIONS
 
-    -v           Be verbose (or --noverbose).
-    -s=<string>  Sort on either "E-value", "Score", or "Identity". "Score" is default.
-    -m, -n=<nr>  Maximum number of hits to show. Default is one.
-    -i <infile>  Infile.
+    -i <infile>  Infile. Mandatory.
+    -m, -n=<nr>  Maximum number of hits to show.
+                 Default is "1".
+    -s=<string>  Sort output sequences on either "E-value", "Score", or "Identity".
+                 "Score" is default.
+    -p=<integer> Minimum percentage for residual identity in alignment.
+                 Default is "80".
+    -c=<integer> Minimum coverage ((length of query in alignment pair/original length of query)*100).
+                 Default is "80".
     -o <oufile>  Outfile.
+    -v           Be verbose (or --noverbose).
 
 ## REQUIREMENTS
 
 BioPerl, Bio::SearchIO::hmmer.
 
-Exmple installation on Ubuntu 22.04:
+Example installation on Ubuntu 22.04:
 
     $ sudo apt install \
           libbio-perl-perl \
@@ -76,7 +93,7 @@ Beware of change in output format between HMMer versions.
 
 ## AUTHOR
 
-Johan Nylander (JN)
+Johan Nylander
 
 ## COMPANY
 
