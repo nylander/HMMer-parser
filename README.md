@@ -53,15 +53,15 @@ Parse
 
 ### nhmmer (HMMER 3.3.2); coi HMM-profile (calculated from a coi multiple sequence alignment) against one genome (nt)
 
-   $ wget -O - \
-     "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/335/GCF_000002335.3_Tcas5.2/GCF_000002335.3_Tcas5.2_genomic.fna.gz" | \
-     gunzip -c > data/GCF_000002335.3.fna
-   $ scripts/fas2sto.pl data/ref-coi.fas > data/ref-coi.sto
-   $ hmmbuild --cpu 4 data/ref-coi.hmm data/ref-coi.sto
-   $ nhmmer --cpu 4 \
-       -o data/GCF_000002335.ref-coi-vs-GCF_000002335.3.nhmmer.out \
-       data/ref-coi.hmm \
-       data/GCF_000002335.3.fna
+    $ wget -O - \
+       "https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/002/335/GCF_000002335.3_Tcas5.2/GCF_000002335.3_Tcas5.2_genomic.fna.gz" | \
+       gunzip -c > data/GCF_000002335.3.fna
+    $ scripts/fas2sto.pl data/ref-coi.fas > data/ref-coi.sto
+    $ hmmbuild --cpu 4 data/ref-coi.hmm data/ref-coi.sto
+    $ nhmmer --cpu 4 \
+        -o data/GCF_000002335.ref-coi-vs-GCF_000002335.3.nhmmer.out \
+        data/ref-coi.hmm \
+        data/GCF_000002335.3.fna
 
 Parse
 
