@@ -9,42 +9,45 @@
 
         USAGE: ./hmmer-parser.pl [-v] [-s=<E-value|Score|Identity>] [-n <max>] -i hmmer-output-file-from-hmmsearch -o oufile.fasta
 
-  DESCRIPTION: Parses output from hmmer search. Prints hits in fasta format with descriptions
-               added to the fasta header (tab separated).
+  DESCRIPTION: Parses output from HMMEer searches (hmmsearch or nhmmer).
+               Prints hits in fasta format with descriptions added to the fasta header (tab separated).
 
-               Example:
+               Example output fasta header:
 
                >TRINITY_DN52935_c2_g1_i1	Query:COI	Identity:83.35	E-value:1.2e-277	Score:926.9	Result:PRESENT
 
                A label "PRESENT" will be there if identity requirements are fulfilled:
 
-                    if ( ($percent_id >= 80) and ($percent_query_coverage >= 80) ) 
+                    if ( (percent identity in HSP >= PERCENTAGE) and (percent coverage of HSP to query >= COVERAGE) )
 
-               Tested on output from nhmmer v.3.1b2.
+               If not "PRESENT", then the tag can be labeled as "ABSENT" or "TRUNCATED" depending on the values of
+               percent identity in HSP and the percent coverage of HSP to query.
+
+               The values of PERCENTAGE and COVERAGE can be set by options -p and -c and will only affect
+               the tag "Result" in the output.
 
       OPTIONS:
                -v           Be verbose (or --noverbose).
                -s=<string>  sort on either "E-value", "Score", or "Identity". "Score" is default.
-               -m, -n=<nr>  Maximum number of hits to show. Default is one.
+               -m, -n=<nr>  Maximum number of hits to show. Default is "1".
+               -p=<integer> Minimum percentage for residual identity in alignment. Default is "80".
+               -c=<integer> Minimum coverage ((length of query in alignment pair / original length of query) * 100).
+                            Default is "80".
                -i <infile>  Infile.
                -o <oufile>  Outfile.
 
 
- REQUIREMENTS: BioPerl
+ REQUIREMENTS: BioPerl, Bio::SearchIO::hmmer
 
-         BUGS: ---
-
-        NOTES: ---
-
-       AUTHOR: Johan Nylander (JN), Johan.Nylander@nbis.se
+       AUTHOR: Johan Nylander
 
       COMPANY: NRM
 
-      VERSION: 1.0
+      VERSION: 1.0.1
 
-      CREATED: 09/17/2015 10:39:21 PM
+      CREATED: 09/17/2015
 
-     REVISION: 03/24/2017 09:23:52 AM
+     REVISION: tis 19 sep 2023 15:37:16
 
 =cut
 
@@ -52,31 +55,42 @@
 
 use strict;
 use warnings;
-use Data::Dumper;
 use Getopt::Long;
 use Bio::SearchIO;
 
 exec( 'perldoc', $0 ) unless (@ARGV);
 
-my $infile     = q{};
-my $outfile    = q{};
-my $VERBOSE    = 1;
-my $sort       = "Score";
-my $max        = 1;
-my $wraplength = 80;
-my %res_hash   = ();
+my $infile             = q{};
+my $outfile            = q{};
+my $VERBOSE            = 1;
+my $sort               = "Score";
+my $max                = 1;
+my $wraplength         = 80;
+my $coverage           = q{};
+my $coverage_default   = 80;
+my $percentage         = q{};
+my $percentage_default = 80;
+my %res_hash           = ();
 my $PRINT_FH;
 my $using_outfile;
 
+GetOptions(
+    "infile=s"     => \$infile,
+    "verbose!"     => \$VERBOSE,
+    "outfile=s"    => \$outfile,
+    "sort=s"       => \$sort,
+    "max|n=i"      => \$max,
+    "coverage=i"   => \$coverage,
+    "percentage=i" => \$percentage,
+    "help"         => sub { exec("perldoc", $0); exit(0); },
+);
 
-my $r = GetOptions(
-    "infile=s"  => \$infile,
-    "verbose!"  => \$VERBOSE,
-    "outfile=s" => \$outfile,
-    "sort=s"    => \$sort,
-    "max|n=i"   => \$max,
-    "help"      => sub { exec("perldoc", $0); exit(0); },
-    );
+if (! $coverage) {
+    $coverage = $coverage_default;
+}
+if (! $percentage) {
+    $percentage = $percentage_default;
+}
 
 if (! $infile) {
     die "Error: need an infile.\nSee $0 -h for usage\n.";
@@ -93,7 +107,7 @@ my $in = Bio::SearchIO->new( -file => $infile, -format => 'hmmer' );
 
 print STDERR "Reading file: $infile\n" if ($VERBOSE);
 
-while ( my $result = $in -> next_result ) { # This is a Bio::Search::Result::HMMERResult object
+while ( my $result = $in -> next_result ) { # A Bio::Search::Result::HMMERResult object
 
     next unless ($result->query_name);
     print STDERR "Query name: " . $result->query_name . "\n" if ($VERBOSE);
@@ -101,29 +115,31 @@ while ( my $result = $in -> next_result ) { # This is a Bio::Search::Result::HMM
     while( my $hit = $result->next_hit ) {
 
         while( my $hsp = $hit->next_hsp ) { # A Bio::Search::HSP::HSPI object
-
             my $percent_id = sprintf("%.2f", $hsp->percent_identity);
-            my $percent_query_coverage = sprintf("%.2f", ((($hsp->length('query')/($result->query_length)))*100));
-            my $Result = 'ABSENT';
-            my $hit_string = $hsp->hit_string;
-            $hit_string =~ s/(.{$wraplength})/$1\n/g;
 
-            if ( ($percent_id >= 80) and ($percent_query_coverage >= 80) ) {
+            my $percent_query_coverage = sprintf("%.2f", ((($hsp->length('query')/($result->query_length)))*100));
+
+            my $hit_string = $hsp->hit_string;
+            $hit_string =~ s/(.{$wraplength})/$1\n/g; # Sequence in HSP, wrapped
+
+            my $Result = 'ABSENT';
+
+            if ( ($percent_id >= $percentage) and ($percent_query_coverage >= $coverage) ) {
                 $Result = "PRESENT";
             }
-            elsif ( ($percent_id >= 80) and ($percent_query_coverage < 80) ) {
+            elsif ( ($percent_id >= $percentage) and ($percent_query_coverage < $coverage) ) {
                 $Result = "TRUNCATED";
             }
 
             if ($sort) {
                 $res_hash{$hit->name()} = {
-                                 "Query" => $result->query_name,
-                                 "Identity" => $percent_id,
-                                 "E-value" => $hsp->evalue(),
-                                 "Score" => $hsp->score(),
-                                 "Result" => $Result,
-                                 "hit_string" => $hit_string,
-                             };
+                    "Query" => $result->query_name,
+                    "Identity" => $percent_id,
+                    "E-value" => $hsp->evalue(),
+                    "Score" => $hsp->score(),
+                    "Result" => $Result,
+                    "hit_string" => $hit_string,
+                };
             }
         }
     }
@@ -160,12 +176,12 @@ if ($sort) {
         foreach my $hitname (@sorted_hitnames) {
             last if ($i == $max);
             print $PRINT_FH ">", $hitname, "\t",
-                "Query:", $res_hash{$hitname}{"Query"}, "\t",
-                "Identity:", $res_hash{$hitname}{"Identity"}, "\t",
-                "E-value:", $res_hash{$hitname}{"E-value"}, "\t",
-                "Score:", $res_hash{$hitname}{"Score"}, "\t",
-                "Result:",$res_hash{$hitname}{"Result"}, "\n",
-                $res_hash{$hitname}{"hit_string"}, "\n";
+                  "Query:", $res_hash{$hitname}{"Query"}, "\t",
+                  "Identity:", $res_hash{$hitname}{"Identity"}, "\t",
+                  "E-value:", $res_hash{$hitname}{"E-value"}, "\t",
+                  "Score:", $res_hash{$hitname}{"Score"}, "\t",
+                  "Result:",$res_hash{$hitname}{"Result"}, "\n",
+                  $res_hash{$hitname}{"hit_string"}, "\n";
             $i++;
         }
     }
@@ -182,37 +198,4 @@ if ($using_outfile) {
         die "Could not create outfile: $outfile $! \n";
     }
 }
-
-__END__
-print "\tNumber conserved residues: " . $hsp->num_conserved . "\n";
-print "\tQuery length: " . $result->query_length . "\n";
-print "\tAlignment length: " . $hsp->length('query') . "\n";
-print "\tQuery coverage: $percent_q_coverage\%\n";
-
-"Fraction identical:" , $res_hash{$hitname}{"Fraction_identical"}, "\t",
-
-else {
-    if ( ($percent_id >= 80) and ($percent_q_coverage >= 80) ) {
-        ## Probably a good one
-        print STDOUT ">", $hit->name(), "\t",
-                     "Query:", $result->query_name, "\t",
-                     "Identity:", $percent_id, "\t",
-                     "Fraction identical:" , $frac_identical, "\t",
-                     "E-value:", $hsp->evalue(), "\t",
-                     "Score:", $hsp->score(), "\t",
-                     "Result:PRESENT", "\n",
-                     $hsp->hit_string, "\n";
-        warn "\n HERE (hit return to continue)\n" and getc();
-    }
-    elsif ( ($percent_id >= 80) and ($percent_q_coverage < 80) ) {
-        print STDERR "\t**", $hit->name(), "Result: TRUNCATED\n\n";
-    }
-    else {
-        print STDERR "\t**", $hit->name(), "Result: ABSENT\n\n";
-    }
-}
-
-"Fraction_identical" => $frac_identical,
-
-my $frac_identical = sprintf("%.2f", $hsp->frac_identical('total'));
 
