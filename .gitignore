@@ -1,1 +1,11 @@
 Old/
+*.swp
+NOTES
+data/ref-coi.sto
+data/ref-coi.hmm
+data/coi-vs-ref-coi.hmmsearch.out
+data/coi-vs-ref-coi.hmmsearch.hmm-parser.fas
+data/GCF_000002335.3.fna
+data/GCF_000002335.ref-coi-vs-GCF_000002335.3.nhmmer.out
+data/GCF_000002335.ref-coi-vs-GCF_000002335.3.nhmmer.hmm-parser.fas
+

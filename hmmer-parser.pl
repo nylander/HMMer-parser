@@ -1,4 +1,4 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 
 =pod
@@ -38,7 +38,7 @@
 
        AUTHOR: Johan Nylander (JN), Johan.Nylander@nbis.se
 
-      COMPANY: NBIS/NRM
+      COMPANY: NRM
 
       VERSION: 1.0
 
@@ -69,13 +69,14 @@ my $PRINT_FH;
 my $using_outfile;
 
 
-my $r = GetOptions("infile=s"  => \$infile,
-                   "verbose!"  => \$VERBOSE,
-                   "outfile=s" => \$outfile,
-                   "sort=s"    => \$sort,
-                   "max|n=i"   => \$max,
-                   "help"      => sub { exec("perldoc", $0); exit(0); },
-                  );
+my $r = GetOptions(
+    "infile=s"  => \$infile,
+    "verbose!"  => \$VERBOSE,
+    "outfile=s" => \$outfile,
+    "sort=s"    => \$sort,
+    "max|n=i"   => \$max,
+    "help"      => sub { exec("perldoc", $0); exit(0); },
+    );
 
 if (! $infile) {
     die "Error: need an infile.\nSee $0 -h for usage\n.";
